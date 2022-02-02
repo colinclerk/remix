@@ -12,7 +12,12 @@ import { matchServerRoutes } from "./routeMatching";
 import { ServerMode, isServerMode } from "./mode";
 import type { ServerRoute } from "./routes";
 import { createRoutes } from "./routes";
-import { json, isRedirectResponse, isCatchResponse } from "./responses";
+import {
+  json,
+  isRedirectResponse,
+  isCatchResponse,
+  isDataResponse
+} from "./responses";
 import { createServerHandoffString } from "./serverHandoff";
 
 /**
@@ -333,6 +338,7 @@ async function renderDocumentRequest({
 
     let error = result.status === "rejected" ? result.reason : undefined;
     let response = result.status === "fulfilled" ? result.value : undefined;
+    let isData = response ? isDataResponse(response) : false;
     let isRedirect = response ? isRedirectResponse(response) : false;
     let isCatch = response ? isCatchResponse(response) : false;
 
@@ -342,12 +348,15 @@ async function renderDocumentRequest({
       break;
     }
 
-    // If there is a response and it's a redirect, do it unless there
-    // is an action error or catch state, those action boundary states
-    // take precedence over loader sates, this means if a loader redirects
-    // after an action catches or errors we won't follow it, and instead
-    // render the boundary caused by the action.
-    if (!actionCatch && !actionError && response && isRedirect) {
+    // If there is a Response returned from the loader that does not contain
+    // data for the default module, respond with it unless:
+    // 1. The loader Response has a catch state. If the response was thrown,
+    //    the boundary caused will be rendered instead.
+    // 2. There is an action error or catch state. Those action boundary
+    //    states take precedence over loader states, this means if a loader
+    //    returns a Response after an action catches or errors, the boundary
+    //    caused by the action will be rendered instead.
+    if (response && !isData && !isCatch && !actionCatch && !actionError) {
       return response;
     }
 

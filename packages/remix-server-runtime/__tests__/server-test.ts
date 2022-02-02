@@ -788,6 +788,68 @@ describe("shared server runtime", () => {
       expect(entryContext.routeData).toEqual({});
     });
 
+    test("non-data response from root loader returned", async () => {
+      let rootLoader = jest.fn(() => {
+        return new Response(null, { status: 200 });
+      });
+      let indexLoader = jest.fn(() => {
+        return "route";
+      });
+      let build = mockServerBuild({
+        root: {
+          default: {},
+          loader: rootLoader,
+          CatchBoundary: {}
+        },
+        "routes/index": {
+          parentId: "root",
+          index: true,
+          default: {},
+          loader: indexLoader
+        }
+      });
+      let handler = createRequestHandler(build, {}, ServerMode.Test);
+
+      let request = new Request(`${baseUrl}/`, { method: "get" });
+
+      let result = await handler(request);
+      expect(result.status).toBe(200);
+      expect(rootLoader.mock.calls.length).toBe(1);
+      expect(indexLoader.mock.calls.length).toBe(1);
+      expect(build.entry.module.default.mock.calls.length).toBe(0);
+    });
+
+    test("non-data response from route loader is returned", async () => {
+      let rootLoader = jest.fn(() => {
+        return "root";
+      });
+      let indexLoader = jest.fn(() => {
+        return new Response(null, { status: 200 });
+      });
+      let build = mockServerBuild({
+        root: {
+          default: {},
+          loader: rootLoader,
+          CatchBoundary: {}
+        },
+        "routes/index": {
+          parentId: "root",
+          index: true,
+          default: {},
+          loader: indexLoader
+        }
+      });
+      let handler = createRequestHandler(build, {}, ServerMode.Test);
+
+      let request = new Request(`${baseUrl}/`, { method: "get" });
+
+      let result = await handler(request);
+      expect(result.status).toBe(200);
+      expect(rootLoader.mock.calls.length).toBe(1);
+      expect(indexLoader.mock.calls.length).toBe(1);
+      expect(build.entry.module.default.mock.calls.length).toBe(0);
+    });
+
     test("thrown loader responses bubble up", async () => {
       let rootLoader = jest.fn(() => {
         return "root";

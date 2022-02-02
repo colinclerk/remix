@@ -60,6 +60,11 @@ export function isRedirectResponse(response: Response): boolean {
   return redirectStatusCodes.has(response.status);
 }
 
+export function isDataResponse(response: Response): boolean {
+  let contentType = response.headers.get("Content-Type");
+  return !!(contentType && /\bapplication\/json\b/.test(contentType));
+}
+
 export function isCatchResponse(response: Response) {
   return response.headers.get("X-Remix-Catch") != null;
 }
